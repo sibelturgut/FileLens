@@ -7,7 +7,7 @@ import magic
 # from scanner.config import 
 # from scanner.resources import
 
-class Analyser():
+class Analyzer():
     def __init__(self):
 
     

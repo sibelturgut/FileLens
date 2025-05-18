@@ -6,5 +6,7 @@ import time
 import typing
 from pathlib import Path
 
-# from scanner.config import 
-# from scanner.resources import 
+from scanner.config import Config
+from scanner.resources import LockWrapper
+
+class Scan:

@@ -15,4 +15,6 @@ matplotlib.use('Agg')
 import matplotlib.pyplot as plt
 from matplotlib.ticker import MaxNLocator
 
-# from scanner.config import 
+from scanner.config import Config
+
+class Reporter:
