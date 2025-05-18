@@ -1,12 +1,12 @@
  empty __init__.py
  config.py - cli
- runner.py dispatch logic
  resources.py  LockWrapper 
  scan.py - dir scan via multi‑thread and banker checks.
  analysis.py- analyzer for the reports
  monitor.py: DirMonitor class wrapping watchdog to apply real‑time changes.
  interactive.py interactive shell  stats, export, cleanup, exit
- report.py pdf report
  cleanup.py send2trash
+ main - runner
+ reporter - pdf
  utils.py - path handling, magic, state track
  tests

@@ -1,3 +1,7 @@
 import time
-import os
-from send2trash import send2trash
+import sys
+import typing
+from pathlib import Path
+import send2trash
+
+#from scanner.config import config
