@@ -3,7 +3,7 @@ import sys
 from pathlib import Path
 
 def print_initial_usage_and_exit():
-    #message for the first run, and "python main.py" with no args.
+    # message for the first run, and "python main.py" with no args.
     print(" ")
     print("Welcome to FileLens: Cross‐platform file analyzer and scanner.")
     print(" ")
@@ -18,3 +18,4 @@ def print_initial_usage_and_exit():
     print("\nFor more information about a specific mode and its options, try:")
     print("  python main.py <mode> --help")
     sys.exit(0)
+   
