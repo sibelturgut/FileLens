@@ -69,14 +69,19 @@ def add_args(parser_obj: argparse.ArgumentParser):
         default=Path.cwd() / "filelens_reports",
         help="Directory to save PDF reports. (Default: ./filelens_reports)"
     )
-    parser_obj.add_argument(
+    '''parser_obj.add_argument(
         "--detailed", "-d",
         action="store_true",
         help="Enable detailed logging output."
-    )
+    )'''
     parser_obj.add_argument(
         "--lock-timeout", "-l",
         type=float,
         default=5.0,
         help="Timeout for lock acquisition. (Default: 5.0)"
     )
+
+def run_cli():
+    parser = argparse.ArgumentParser(description='Welcome to FileLens')
+    add_args(parser)
+    args = parser.parse_args()
