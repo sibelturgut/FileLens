@@ -2,7 +2,7 @@ import argparse
 import sys
 import os
 from pathlib import Path
-from scanner import handler
+from scanner.service.scan import scan
 
 def print_initial_usage_and_exit():
     # message for the first run, and "python main.py" with no args.
@@ -87,7 +87,7 @@ def run_cli():
     args = parser.parse_args()
 
     if args.command == "scan":
-        handler.scan(args.sdirectory, args.monitor, args.verbose, args.threads, args.charttype, args.reportdir)
+        scan(args.sdirectory, args.threads)
     if args.command == "interactive":
         print_initial_usage_and_exit()
         while True:
@@ -102,14 +102,18 @@ def run_cli():
                 print("Invalid command. Type 'help' for command list.")
 
             if args.command == "scan":
-                handler.scan(args.sdirectory, args.monitor, args.verbose, args.threads, args.charttype, args.reportdir)
+                scan(args.sdirectory, args.threads)
             elif args.command == "report":
-                handler.report(args.rdirectory, args.charttype)
+                #handler.report(args.rdirectory, args.charttype)
+                return
             elif args.command == "findold":
-                handler.findold(args.day)
+                #handler.findold(args.day)
+                return
             elif args.command == "cleanup":
-                handler.cleanup()
+                #handler.cleanup()
+                return
             elif args.command == "config":
-                handler.config()
+                #handler.config()
+                return
             elif args.command == "help":
                 return
