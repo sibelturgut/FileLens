@@ -4,6 +4,8 @@ import os
 import threading
 import collections
 
+from utils.locking import Locking
+
 def scan(start_directory, threads): #sdirectory, monitor, verbose, threads, charttype, reportdir
     processed_or_queued = set() #to avoid repetition
     active_futures = {}
