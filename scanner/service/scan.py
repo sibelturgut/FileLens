@@ -2,16 +2,14 @@ import concurrent.futures
 import time
 import os
 import threading
-import collections
-
-from utils.locking import Locking
 
 def scan(start_directory, threads): #sdirectory, monitor, verbose, threads, charttype, reportdir
+    start_time = time.time()
     processed_or_queued = set() #to avoid repetition
     active_futures = {}
     count = 0
     totalsize = 0
-    lock = threading.Lock()
+    lock = threading.RLock()
 
     def worker(dir):
         nonlocal count, totalsize
@@ -27,7 +25,6 @@ def scan(start_directory, threads): #sdirectory, monitor, verbose, threads, char
                     try:
                         with lock:
                             count += 1
-                            totalsize += item.stat().st_size
                     except FileNotFoundError:
                         pass
                     #print(f"File: {item.path}")
@@ -71,5 +68,5 @@ def scan(start_directory, threads): #sdirectory, monitor, verbose, threads, char
                     #print(f"Task for directory '{original_dir_scanned}' raised an exception: {e}")
         
         print("Scanning complete.")
-        print(count)
-        print(totalsize)
+        print(f"Time taken for the scan: {time.time()-start_time:.2f} seconds")
+        print(f"Total number of files scanned: {count}")
