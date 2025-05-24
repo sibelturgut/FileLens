@@ -72,3 +72,28 @@ class LockWrapper:
 
     def __repr__(self): # thats just representation magic method upon called
         return f"<LockWrapper name={self.name!r} rank={self.rank} timeout={self.timeout}>" 
+    
+
+    def bankers_algorithm(self, available: List[int], max_need: List[List[int]], allocation: List[List[int]]) -> bool:
+        """
+        Check if the system is in a safe state using the Banker's algorithm.
+        """
+        num_resources = len(available)
+        num_processes = len(max_need)
+        
+        work = available.copy()
+        finish = [False] * num_processes
+        
+        while True:
+            found = False
+            for i in range(num_processes):
+                if not finish[i]:
+                    need = [max_need[i][j] - allocation[i][j] for j in range(num_resources)]
+                    if all(need[j] <= work[j] for j in range(num_resources)):
+                        work = [work[j] + allocation[i][j] for j in range(num_resources)]
+                        finish[i] = True
+                        found = True
+            if not found:
+                break
+        
+        return all(finish)
