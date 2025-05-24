@@ -12,6 +12,9 @@ class Locking:
         # initially zero allocated
         self.allocated = [[0]*self.num_resources for _ in range(self.num_processe)]
 
+        self.var_states = {}
+
+
     def request(self, pid: int, req: List[int]) -> bool:
         
         #try to allocate req to process pid.
@@ -70,3 +73,68 @@ class Locking:
                 break
 
         return all(finish)
+    
+
+    # state machine 
+    def register_var(self, name: str):
+        """Call once when you create a new shared variable."""
+        with self._lock:
+            if name not in self.var_states:
+                self.var_states[name] = {
+                    'state': 'Virgin',
+                    'owners': set(),
+                    'sem': threading.Semaphore(1)
+                }
+
+    def read(self, name: str, pid: int):
+        entry = self.var_states[name]
+        semaphore = entry['sem']
+        owners = entry['owners']
+
+        semaphore.acquire()
+        try:
+            if pid not in owners:
+                owners.add(pid)
+            #those states are shown in plan
+            if entry['state'] == 'Virgin':
+                entry['state'] = 'Exclusive'
+            elif entry['state'] == 'Exclusive' and len(owners) > 1:
+                entry['state'] = 'Shared'
+        finally:
+            semaphore.release()
+
+    def write(self, name: str, pid: int):
+        entry = self.var_states[name]
+        semaphore = entry['sem']
+        owners = entry['owners']
+
+        semaphore.acquire()
+        try:
+            state = entry['state']
+            #those states are shown in plan
+            if state == 'Virgin':
+                entry['state'] = 'Exclusive'
+                owners.clear()
+                owners.add(pid)
+
+            elif state == 'Exclusive':
+                if pid in owners:
+                    pass  # same thread
+                else:
+                    entry['state'] = 'Shared-Modified'
+                    owners.add(pid)
+                    raise RuntimeError(f"Data race on '{name}'!")
+
+            elif state == 'Shared':
+                entry['state'] = 'Shared-Modified'
+                owners.add(pid)
+                raise RuntimeError(f"Data race on '{name}'!")
+
+            elif state == 'Shared-Modified':
+                if pid not in owners:
+                    owners.add(pid)
+                    raise RuntimeError(f"Data race on '{name}'!")
+                # same writer stay dirty
+
+        finally:
+            semaphore.release()
