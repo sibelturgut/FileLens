@@ -1,99 +1,72 @@
-import threading 
-from typing import List 
-class LockWrapper:
-    
-    def __init__(self, name: str, rank: int, timeout: float):
-        if not name or not isinstance(name, str):
-            raise ValueError("Lock name must be a non-empty string.")
-        if not isinstance(rank, int):
-            raise ValueError("Lock rank must be an integer.")
-        if not isinstance(timeout, (int, float)) or timeout <= 0:
-            raise ValueError("Lock timeout must be a positive number.")
+import threading
+from typing import List
 
-        self.name = name
-        self.rank = rank
-        self.timeout = timeout
-        self._lock = threading.RLock() # reentrant lock, allowing the same thread to acquire it multiple times.
+class Locking:
+    def __init__(self, total_resources: List[int], max_claim: List[List[int]]):
 
-    def acquire(self, blocking: bool = True, timeout_override: float = -1) -> bool:
-        if timeout_override >= 0:
-            self.timeout = timeout_override # verride the timeout specified
+        self._lock = threading.RLock()
+        self.available = total_resources[:]                  # r 
+        self.max_claim = [row[:] for row in max_claim]      # p x r
+        self.num_processe = len(max_claim)
+        self.num_resources = len(total_resources)
+        # initially zero allocated
+        self.allocated = [[0]*self.num_resources for _ in range(self.num_processe)]
 
-        if not blocking: # blocking is False -> try to acquire the lock without waiting.
-            return self._lock.acquire(blocking=False) 
-        # get the lock; wait up to 'self.timeout'. True if acquired, False if timeout.
-        acquired = self._lock.acquire(timeout=self.timeout) 
-        if not acquired:
-            print(f"Timeout: Lock '{self.name}' (rank {self.rank}) "
-                  f"could not be acquired within {self.timeout}s.")
-        return acquired
-
-    def release(self): # release the lock so allow other threads to acquire it.
-        try:
-            self._lock.release() 
-
-        except RuntimeError: #  if a thread tries to release a lock it doesn't currently hold.
-            print(f"Error: Lock '{self.name}' (rank {self.rank}) release failed (not held).")
-
-    def __enter__(self): # Part of pythons context manager protocol (used with 'with' statements)
-        if not self.acquire(): # Automatically tries to acquire the lock when entering a 'with' block.
-            raise threading.ThreadError( # An error specific to threading problems.
-                f"Timeout acquiring lock '{self.name}' (rank {self.rank})."
-            )
-        return self
-
-    def __exit__(self, exc_type, exc_val, exc_tb): # Part of Python's "context manager" protocol
-        self.release() # automatically releases the lock when exiting the block.
-        return False 
-
-    @classmethod #this method belongs to the class.
-    def ordered_acquire(cls, locks: List["LockWrapper"]): # cls is the class itself.
-        # sort locks by their rank to prevent deadlocks.
-        locks_sorted = sorted(locks, key=lambda lock: lock.rank) 
-        acquired_locks: List["LockWrapper"] = [] # track of locks
-        try:
-            for lock in locks_sorted:
-                if not lock.acquire(): # try to acquire each lock in the sorted order.
-                    raise threading.ThreadError(
-                        f"Timeout in ordered acquire for lock '{lock.name}' (rank {lock.rank})."
-                    )
-                acquired_locks.append(lock)
-        except Exception:
-            # any of them fails, and release all locks already acquired in reverse order.
-            for lock in reversed(acquired_locks): 
-                lock.release()
-            raise
-
-    @classmethod
-    def ordered_release(cls, locks: List["LockWrapper"]):
-        # release them in the reverse order they were acquired
-        for lock in sorted(locks, key=lambda lock: lock.rank, reverse=True): 
-            lock.release()
-
-    def __repr__(self): # thats just representation magic method upon called
-        return f"<LockWrapper name={self.name!r} rank={self.rank} timeout={self.timeout}>" 
-    
-
-    def bankers_algorithm(self, available: List[int], max_need: List[List[int]], allocation: List[List[int]]) -> bool:
-        """
-        Check if the system is in a safe state using the Banker's algorithm.
-        """
-        num_resources = len(available)
-        num_processes = len(max_need)
+    def request(self, pid: int, req: List[int]) -> bool:
         
-        work = available.copy()
-        finish = [False] * num_processes
+        #try to allocate req to process pid.
+        #return True if granted.
         
+        with self._lock:
+            if any(r > self.max_claim[pid][i] - self.allocated[pid][i]
+                   for i, r in enumerate(req)):
+                return False
+
+            if any(r > self.available[i] for i, r in enumerate(req)):
+                return False
+
+            new_available = [a - r for a, r in zip(self.available, req)]
+            new_allocated = [row[:] for row in self.allocated]
+            for i in range(self.num_resources):
+                new_allocated[pid][i] += req[i]
+
+            if not self._is_safe(new_available, new_allocated):
+                return False
+
+            self.available = new_available
+            self.allocated = new_allocated
+            return True
+
+    def release(self, pid: int, rel: List[int]) -> None:
+        #Release resources from process pid.
+        with self._lock:
+            for i, r in enumerate(rel):
+                to_release = min(r, self.allocated[pid][i])
+                self.available[i] += to_release
+                self.allocated[pid][i] -= to_release
+
+    def _is_safe(self, work: List[int], allocated: List[List[int]]) -> bool:
+        #Banker's safety algorithm.
+
+        # compute need = max_claim – alloc
+        need = [
+            [self.max_claim[p][i] - allocated[p][i]
+             for i in range(self.num_resources)]
+            for p in range(self.num_processe)
+        ]
+        finish = [False]*self.num_processe
+
         while True:
-            found = False
-            for i in range(num_processes):
-                if not finish[i]:
-                    need = [max_need[i][j] - allocation[i][j] for j in range(num_resources)]
-                    if all(need[j] <= work[j] for j in range(num_resources)):
-                        work = [work[j] + allocation[i][j] for j in range(num_resources)]
-                        finish[i] = True
-                        found = True
-            if not found:
+            progressed = False
+            for p in range(self.num_processe):
+                if not finish[p] and all(need[p][i] <= work[i]
+                                         for i in range(self.num_resources)):
+                    # pretend this process completes
+                    for i in range(self.num_resources):
+                        work[i] += allocated[p][i]
+                    finish[p] = True
+                    progressed = True
+            if not progressed:
                 break
-        
+
         return all(finish)
