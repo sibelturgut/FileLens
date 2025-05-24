@@ -13,7 +13,6 @@ def print_initial_usage_and_exit():
     print("  python main.py --help")
     print("\nFor more information about a specific mode and its options, try:")
     print("  python main.py <mode> --help")
-    sys.exit(0)
 
 def add_args(parser_obj: argparse.ArgumentParser):
     # helper function to define the cli args for the script.
